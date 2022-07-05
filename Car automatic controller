@@ -1,0 +1,80 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class CarControllerAutomatic : MonoBehaviour
+{
+
+    // Retrieving all Car components from Unity
+    [Header("Wheel colliders")]
+    [SerializeField] WheelCollider FrontleftCollider;
+    [SerializeField] WheelCollider FrontRightCollider;
+    [SerializeField] WheelCollider BackleftCollider;
+    [SerializeField] WheelCollider BackRightCollider;
+
+    [Header("Wheel objects")]
+    [SerializeField] Transform FrontLeftTransform;
+    [SerializeField] Transform FrontRightTransform;
+    [SerializeField] Transform BackLeftTransform;
+    [SerializeField] Transform BackRightTransform;
+
+    // Some adjustables to be able to configure the car from within Unity
+    [Header("Engine attributes")]
+    [SerializeField] float EnginePower;
+    [SerializeField] float Brakepower;
+    [SerializeField] float MaxSteerAngle;
+
+    // Setting a speed limit for the car
+    [Header("Speed limit")]
+    [SerializeField] float MaxSpeed;
+
+    private float CurrentEnginePower = 0f;
+    private float CurrentSpeed = 0f;
+
+
+
+    // Start is called before the first frame update
+    void Start()
+    {
+
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+
+    }
+
+    //FixedUpdate is called once per physics update
+    private void FixedUpdate()
+    {
+
+
+        // Making the car go forward and backward with w,s or up-arrow,down-arrow. I am still working on a speed limiter
+
+        if (Rigidbody.velocity.magnitude > MaxSpeed)
+            Rigidbody.velocity = Rigidbody.velocity.normalized * MaxSpeed;
+
+        else
+            CurrentEnginePower = EnginePower;
+
+        FrontleftCollider.motorTorque = CurrentEnginePower;
+        FrontRightCollider.motorTorque = CurrentEnginePower;
+
+        //making the wheel models turn and rotate
+
+        void UpdateWheel(WheelCollider col, Transform trans)
+        {
+            Vector3 position;
+            Quaternion rotation;
+            col.GetWorldPose(out position, out rotation);
+
+            trans.position = position;
+            trans.rotation = rotation;
+        }
+        UpdateWheel(FrontleftCollider, FrontLeftTransform);
+        UpdateWheel(FrontRightCollider, FrontRightTransform);
+        UpdateWheel(BackleftCollider, BackLeftTransform);
+        UpdateWheel(BackRightCollider, BackRightTransform);
+    }
+}
