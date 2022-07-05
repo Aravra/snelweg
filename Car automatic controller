@@ -21,22 +21,16 @@ public class CarControllerAutomatic : MonoBehaviour
     // Some adjustables to be able to configure the car from within Unity
     [Header("Engine attributes")]
     [SerializeField] float EnginePower;
-    [SerializeField] float Brakepower;
-    [SerializeField] float MaxSteerAngle;
-
-    // Setting a speed limit for the car
-    [Header("Speed limit")]
     [SerializeField] float MaxSpeed;
 
     private float CurrentEnginePower = 0f;
-    private float CurrentSpeed = 0f;
 
-
+    public Rigidbody rb;
 
     // Start is called before the first frame update
     void Start()
     {
-
+        rb = GetComponent<Rigidbody>();
     }
 
     // Update is called once per frame
@@ -52,8 +46,8 @@ public class CarControllerAutomatic : MonoBehaviour
 
         // Making the car go forward and backward with w,s or up-arrow,down-arrow. I am still working on a speed limiter
 
-        if (Rigidbody.velocity.magnitude > MaxSpeed)
-            Rigidbody.velocity = Rigidbody.velocity.normalized * MaxSpeed;
+        if (rb.velocity.magnitude >= MaxSpeed)
+            rb.velocity = rb.velocity.normalized * MaxSpeed;
 
         else
             CurrentEnginePower = EnginePower;
