@@ -35,7 +35,6 @@ public class CarFollowController : MonoBehaviour
     private float CurrentBrakePower = 0f;
     private float CurrentSteerAngle = 0f;
     private Rigidbody rb;
-    private bool InFront = true;
     private bool LookingTowards = true;
 
 
@@ -47,7 +46,7 @@ public class CarFollowController : MonoBehaviour
         return distance;
     }
 
-    // Gets the angle between the car and the object it is supposed to follow
+    // Gets the angle between the car and the FollowTransform
     float GetAngle()
     {
         Vector3 RelativePositionTarget = FollowTransform.position - transform.position;
@@ -57,7 +56,7 @@ public class CarFollowController : MonoBehaviour
 
     }
 
-    // test
+    // Gets the relative angle between the car and the FollowTransform
     float GetRelativeAngle()
     {
         Vector3 targetDir = FollowTransform.position - transform.position;
@@ -65,6 +64,17 @@ public class CarFollowController : MonoBehaviour
         float angle = Vector3.SignedAngle(targetDir, forward, Vector3.up);
 
         return angle;
+    }
+
+    // Check if the FollowTransform is in front of the car
+    float CheckIfInFront()
+    {
+        float InFront = 0f;
+
+        Vector3 heading = FollowTransform.position - transform.position;
+        InFront = Vector3.Dot(heading, transform.forward);
+
+        return InFront;
     }
 
     // Start is called before the first frame update
@@ -84,21 +94,9 @@ public class CarFollowController : MonoBehaviour
         
         float distance = GetDistance();
         float angle = GetAngle();
-
         float relativeAngle = GetRelativeAngle();
+        float InFront = CheckIfInFront();
         
-
-        // Checking if the FollowTransform is in front of behind the car and whether it is left or right of the car
-
-        if (rb.position.z < FollowTransform.GetComponent<Rigidbody>().position.z)
-        {
-            InFront = true;
-        }
-
-        else
-        {
-            InFront = false;
-        }
 
         // Checking if the car is Looking towards the FollowTransform
 
@@ -113,11 +111,11 @@ public class CarFollowController : MonoBehaviour
         }
 
         // Determining the CurrentEnginePower based on the distance and if the car is in front of behind of the FollowTransform
-        if (InFront)
+        if (InFront > 0f)
         {
             CurrentBrakePower = 0f;
 
-            if (rb.velocity.magnitude > FollowTransform.GetComponent<Rigidbody>().velocity.magnitude && distance < FollowDistance+100)
+            if (distance < FollowDistance+100)
             {
                 //rb.velocity = rb.velocity.normalized * FollowTransform.GetComponent<Rigidbody>().velocity.magnitude;
                 //CurrentEnginePower = 0f;
@@ -126,17 +124,14 @@ public class CarFollowController : MonoBehaviour
                     CurrentEnginePower = distance / 100 * EnginePower;
                 }
 
-                else if (distance < FollowDistance+50 && distance > FollowDistance+5)
+                else if (distance < FollowDistance+50 && rb.velocity.magnitude < FollowTransform.GetComponent<Rigidbody>().velocity.magnitude)
                 {
-                    CurrentEnginePower = 0f;
+                    CurrentEnginePower = distance/50 * EnginePower;
                 }
 
-                else
+                else if (distance < FollowDistance+25 && rb.velocity.magnitude > FollowTransform.GetComponent<Rigidbody>().velocity.magnitude)
                 {
-                    while (rb.velocity.magnitude > FollowTransform.GetComponent<Rigidbody>().velocity.magnitude)
-                    {
-                        CurrentBrakePower = 1 / distance * Brakepower;
-                    }
+                    CurrentBrakePower = Brakepower;
                 }
             }
 
@@ -149,9 +144,7 @@ public class CarFollowController : MonoBehaviour
 
         else
         {
-            FrontleftCollider.motorTorque = 0f;
-            FrontRightCollider.motorTorque = 0f;
-
+            CurrentEnginePower = 0f;
             CurrentBrakePower = Brakepower;
         }
 
@@ -209,8 +202,7 @@ public class CarFollowController : MonoBehaviour
             Quaternion rotation;
             col.GetWorldPose(out position, out rotation);
 
-            trans.position = position;
-            trans.rotation = rotation;
+            trans.SetPositionAndRotation(position, rotation);
         }
         UpdateWheel(FrontleftCollider, FrontLeftTransform);
         UpdateWheel(FrontRightCollider, FrontRightTransform);
