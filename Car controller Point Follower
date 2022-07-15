@@ -36,18 +36,14 @@ public class CarFollowController : MonoBehaviour
     private float CurrentSteerAngle = 0f;
     private Rigidbody rb;
     private bool LookingTowards = true;
-    private Vector3 oldPosition = new Vector3(0,0,0);
+    private Vector3 oldPosition = new Vector3(0, 0, 0);
     private float speedPoint;
     private Vector3 pointtofollow;
     private float MaxSpeedVariable;
-
-
-    void Update()
-    {
-        pointtofollow = pointsystem.GetComponent<pointsystem>().forwardpoints[0];
-        speedPoint = Vector3.Distance(oldPosition, pointtofollow) / Time.deltaTime;
-        oldPosition = pointtofollow;
-    }
+    private int i = 0;
+    private int pointInList = 0;
+    private int LengthList = 0;
+    private int oldLengthList = 1;
 
 
     // Gets the distance between the car and the object it is supposed to follow
@@ -95,9 +91,27 @@ public class CarFollowController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
 
         pointsystem = GameObject.Find("pointsystem");
-        pointtofollow = pointsystem.GetComponent<pointsystem>().forwardpoints[0];
 
         MaxSpeedVariable = (float)(MaxSpeed - (100 / 3.6));
+    }
+
+    void Update()
+    {
+        LengthList = pointsystem.GetComponent<pointsystem>().forwardpoints.Count;
+        if (LengthList == oldLengthList)
+        {
+            return;
+        }
+        else
+        {
+            i++;
+        }
+        pointInList = LengthList - i;
+
+        pointtofollow = pointsystem.GetComponent<pointsystem>().forwardpoints[pointInList];
+
+        speedPoint = Vector3.Distance(oldPosition, pointtofollow) / Time.deltaTime;
+        oldPosition = pointtofollow;
     }
 
     //FixedUpdate is called once per physics update
