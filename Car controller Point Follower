@@ -25,23 +25,35 @@ public class CarFollowController : MonoBehaviour
     [SerializeField] float EnginePower;
     [SerializeField] float Brakepower;
     [SerializeField] float MaxSteerAngle;
+    [SerializeField] float MaxSpeed;
 
     [Header("Follow settings")]
-    [SerializeField] Transform FollowTransform;
+    public GameObject pointsystem;
     [SerializeField] float FollowDistance;
-
 
     private float CurrentEnginePower = 0f;
     private float CurrentBrakePower = 0f;
     private float CurrentSteerAngle = 0f;
     private Rigidbody rb;
     private bool LookingTowards = true;
+    private Vector3 oldPosition = new Vector3(0,0,0);
+    private float speedPoint;
+    private Vector3 pointtofollow;
+    private float MaxSpeedVariable;
+
+
+    void Update()
+    {
+        pointtofollow = pointsystem.GetComponent<pointsystem>().forwardpoints[0];
+        speedPoint = Vector3.Distance(oldPosition, pointtofollow) / Time.deltaTime;
+        oldPosition = pointtofollow;
+    }
 
 
     // Gets the distance between the car and the object it is supposed to follow
     float GetDistance()
     {
-        float distance = Vector3.Distance(FollowTransform.position, transform.position);
+        float distance = Vector3.Distance(pointtofollow, transform.position);
 
         return distance;
     }
@@ -49,7 +61,7 @@ public class CarFollowController : MonoBehaviour
     // Gets the angle between the car and the FollowTransform
     float GetAngle()
     {
-        Vector3 RelativePositionTarget = FollowTransform.position - transform.position;
+        Vector3 RelativePositionTarget = pointtofollow - transform.position;
         float angle = Vector3.Angle(transform.forward, RelativePositionTarget);
 
         return angle;
@@ -59,7 +71,7 @@ public class CarFollowController : MonoBehaviour
     // Gets the relative angle between the car and the FollowTransform
     float GetRelativeAngle()
     {
-        Vector3 targetDir = FollowTransform.position - transform.position;
+        Vector3 targetDir = pointtofollow - transform.position;
         Vector3 forward = transform.forward;
         float angle = Vector3.SignedAngle(targetDir, forward, Vector3.up);
 
@@ -71,7 +83,7 @@ public class CarFollowController : MonoBehaviour
     {
         float InFront = 0f;
 
-        Vector3 heading = FollowTransform.position - transform.position;
+        Vector3 heading = pointtofollow - transform.position;
         InFront = Vector3.Dot(heading, transform.forward);
 
         return InFront;
@@ -81,26 +93,29 @@ public class CarFollowController : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-        
-    }
 
+        pointsystem = GameObject.Find("pointsystem");
+        pointtofollow = pointsystem.GetComponent<pointsystem>().forwardpoints[0];
+
+        MaxSpeedVariable = (float)(MaxSpeed - (100 / 3.6));
+    }
 
     //FixedUpdate is called once per physics update
     private void FixedUpdate()
     {
 
-        
+
         // Getting the distance and angle between the car and the followed point
-        
+
         float distance = GetDistance();
         float angle = GetAngle();
         float relativeAngle = GetRelativeAngle();
         float InFront = CheckIfInFront();
-        
+
 
         // Checking if the car is Looking towards the FollowTransform
 
-        if (rb.rotation == FollowTransform.GetComponent<Rigidbody>().rotation)
+        if (angle == 0f)
         {
             LookingTowards = true;
         }
@@ -115,30 +130,33 @@ public class CarFollowController : MonoBehaviour
         {
             CurrentBrakePower = 0f;
 
-            if (distance < FollowDistance+100)
+            if(rb.velocity.magnitude > MaxSpeed)
             {
-                //rb.velocity = rb.velocity.normalized * FollowTransform.GetComponent<Rigidbody>().velocity.magnitude;
-                //CurrentEnginePower = 0f;
-                if(distance < FollowDistance+100 && distance > FollowDistance+50)
-                {
-                    CurrentEnginePower = distance / 100 * EnginePower;
-                }
-
-                else if (distance < FollowDistance+50 && rb.velocity.magnitude < FollowTransform.GetComponent<Rigidbody>().velocity.magnitude)
-                {
-                    CurrentEnginePower = distance/50 * EnginePower;
-                }
-
-                else if (distance < FollowDistance+25 && rb.velocity.magnitude > FollowTransform.GetComponent<Rigidbody>().velocity.magnitude)
-                {
-                    CurrentBrakePower = Brakepower;
-                }
+                CurrentEnginePower = 0f;
             }
-
 
             else
             {
-                CurrentEnginePower = EnginePower;
+                if (distance < FollowDistance + 100)
+                {
+                    if (distance > FollowDistance)
+                    {
+                        MaxSpeed = ((distance / 100) * MaxSpeedVariable) + speedPoint;
+                        CurrentEnginePower = EnginePower;
+                    }
+
+                    else
+                    {
+                        MaxSpeed = speedPoint;
+                    }
+
+                }
+
+
+                else
+                {
+                    CurrentEnginePower = EnginePower;
+                }
             }
         }
 
@@ -188,7 +206,7 @@ public class CarFollowController : MonoBehaviour
 
         else CurrentSteerAngle = 0f;
 
-        
+
 
         FrontleftCollider.steerAngle = CurrentSteerAngle;
         FrontRightCollider.steerAngle = CurrentSteerAngle;
