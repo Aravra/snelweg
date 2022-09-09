@@ -1,0 +1,169 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using Unity.MLAgents;
+using Unity.MLAgents.Sensors;
+using Unity.MLAgents.Actuators;
+
+public class car : Agent
+{
+    public override void OnEpisodeBegin()
+    {
+        Car.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+        Car.GetComponent<Rigidbody>().velocity = Vector3.zero;
+        Car.transform.localPosition = new Vector3(0f,1f, 0f);
+        Car.transform.localRotation = Quaternion.Euler(0, 90, 0);
+        lastPosition = transform.position;
+        totalDistance = 0f;
+        Car.GetComponent<ColliderCheck>().Collided = false;
+        CurrentEnginePower = 0f;
+        CurrentSteerAngle = 0f;
+        CurrentBrakePower = 100f;
+
+    }
+
+    public override void Heuristic(in ActionBuffers actionsOut)
+    {
+
+        var continuousActionsOut = actionsOut.ContinuousActions;
+        continuousActionsOut[0] = Input.GetAxis("Horizontal");
+        continuousActionsOut[1] = Input.GetAxis("Vertical");
+
+        
+    }
+
+
+    private Vector3 lastPosition;
+    private float totalDistance;
+    public float distancebeforeendepisode;
+
+
+    public GameObject Car;
+    public Transform CarTransform;
+
+
+
+        // Start is called before the first frame update
+    void Start()
+    {
+        
+    }
+
+
+
+
+    public override void CollectObservations(VectorSensor sensor)
+    {
+        float Speed = Car.GetComponent<Rigidbody>().velocity.magnitude;
+        sensor.AddObservation(Speed);
+    }
+
+
+    public override void OnActionReceived(ActionBuffers actions)
+    {
+        CurrentSteerAngle = MaxSteerAngle * actions.ContinuousActions[0];
+
+        
+        if (actions.ContinuousActions[1] > 0f)
+        {
+            CurrentEnginePower = EnginePower * actions.ContinuousActions[1];
+            CurrentBrakePower = 0f;
+        }
+        else
+        {
+            CurrentBrakePower = -Brakepower * actions.ContinuousActions[1];
+            CurrentEnginePower = 0f;
+            AddReward(-0.1f);
+        }
+
+        var ColliderCheck = Car.GetComponent<ColliderCheck>();
+        if (ColliderCheck.Collided)
+        {
+            AddReward(-75f);
+            EndEpisode();
+        }
+        else
+        {
+            AddReward(0.05f * Car.GetComponent<Rigidbody>().velocity.magnitude);
+        }
+        if (totalDistance > distancebeforeendepisode)
+        {
+            AddReward(75f);
+            EndEpisode();
+        }
+    }
+
+
+
+
+    // Retrieving all Car components from Unity
+    [Header("Wheel colliders")]
+    [SerializeField] WheelCollider FrontleftCollider;
+    [SerializeField] WheelCollider FrontRightCollider;
+    [SerializeField] WheelCollider BackleftCollider;
+    [SerializeField] WheelCollider BackRightCollider;
+
+    [Header("Wheel objects")]
+    [SerializeField] Transform FrontLeftTransform;
+    [SerializeField] Transform FrontRightTransform;
+    [SerializeField] Transform BackLeftTransform;
+    [SerializeField] Transform BackRightTransform;
+
+    // Some adjustables to be able to configure the car from within Unity
+    [Header("Engine attributes")]
+    [SerializeField] float EnginePower;
+    [SerializeField] float Brakepower;
+    [SerializeField] float MaxSteerAngle;
+
+    private float CurrentEnginePower = 0f;
+    private float CurrentBrakePower = 0f;
+    private float CurrentSteerAngle = 0f;
+
+    private void FixedUpdate()
+    {
+
+        // Braking
+
+        FrontleftCollider.brakeTorque = CurrentBrakePower;
+        FrontRightCollider.brakeTorque = CurrentBrakePower;
+        BackleftCollider.brakeTorque = CurrentBrakePower;
+        BackRightCollider.brakeTorque = CurrentBrakePower;
+
+
+        // Making the car go forward and backward
+
+        FrontleftCollider.motorTorque = CurrentEnginePower;
+        FrontRightCollider.motorTorque = CurrentEnginePower;
+
+
+        // Making the car steer
+
+        FrontleftCollider.steerAngle = CurrentSteerAngle;
+        FrontRightCollider.steerAngle = CurrentSteerAngle;
+
+
+        //making the wheel models turn and rotate
+
+        void UpdateWheel(WheelCollider col, Transform trans)
+        {
+            Vector3 position;
+            Quaternion rotation;
+            col.GetWorldPose(out position, out rotation);
+
+            trans.position = position;
+            trans.rotation = rotation;
+        }
+        UpdateWheel(FrontleftCollider, FrontLeftTransform);
+        UpdateWheel(FrontRightCollider, FrontRightTransform);
+        UpdateWheel(BackleftCollider, BackLeftTransform);
+        UpdateWheel(BackRightCollider, BackRightTransform);
+
+
+
+        float distance = Vector3.Distance(lastPosition, transform.position);
+        totalDistance += distance;
+        lastPosition = transform.position;
+
+
+    }
+}
