@@ -7,19 +7,53 @@ using Unity.MLAgents.Actuators;
 
 public class car : Agent
 {
+    bool JustSpawned = true;
+    //int Spawntimer = 0;
     public override void OnEpisodeBegin()
     {
-        Car.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
-        Car.GetComponent<Rigidbody>().velocity = Vector3.zero;
-        Car.transform.localPosition = new Vector3(0f,1f, 0f);
-        Car.transform.localRotation = Quaternion.Euler(0, 90, 0);
-        lastPosition = transform.position;
-        totalDistance = 0f;
-        Car.GetComponent<ColliderCheck>().Collided = false;
-        CurrentEnginePower = 0f;
-        CurrentSteerAngle = 0f;
-        CurrentBrakePower = 100f;
+        
+        //if (Spawntimer % 2 == 0)
+        //{
+        //    Car.transform.localPosition = new Vector3(3500f, 1f, 300f);
+        //    Car.transform.localRotation = Quaternion.Euler(0, -8.8f, 0);
+        //}
 
+        //else
+        //{
+        //    Car.transform.localPosition = new Vector3(0f, 1f, 0f);
+        //    Car.transform.localRotation = Quaternion.Euler(0, 90, 0);
+        //}
+        //Spawntimer++;
+
+        //Car.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+        //Car.GetComponent<Rigidbody>().velocity = Vector3.zero;
+        //lastPosition = transform.position;
+        //totalDistance = 0f;
+        //Car.GetComponent<ColliderCheck>().Collided = false;
+        //CurrentEnginePower = 0f;
+        //CurrentSteerAngle = 0f;
+        //CurrentBrakePower = 100f;
+
+        if (JustSpawned == false)
+        {
+            if(Mathf.RoundToInt( Random.Range(0f, 10f)) == 2 )
+            {
+                new WaitForSeconds(100f);
+                CarSpawner.GetComponent<CarSpawn>().NumberOfCarsOnTheRoad--;
+                Destroy(Car);
+
+            }
+            else
+            {
+                CarSpawner.GetComponent<CarSpawn>().NumberOfCarsOnTheRoad --;
+                Destroy(Car);
+            }
+            
+
+        }
+
+        JustSpawned = false;
+        
     }
 
     public override void Heuristic(in ActionBuffers actionsOut)
@@ -40,10 +74,11 @@ public class car : Agent
 
     public GameObject Car;
     public Transform CarTransform;
+    [SerializeField] private GameObject CarSpawner;
 
 
 
-        // Start is called before the first frame update
+    // Start is called before the first frame update
     void Start()
     {
         
@@ -62,6 +97,7 @@ public class car : Agent
     public override void OnActionReceived(ActionBuffers actions)
     {
         CurrentSteerAngle = MaxSteerAngle * actions.ContinuousActions[0];
+        //Debug.Log(Car.GetComponent<Rigidbody>().velocity.magnitude);
 
         
         if (actions.ContinuousActions[1] > 0f)
@@ -73,7 +109,7 @@ public class car : Agent
         {
             CurrentBrakePower = -Brakepower * actions.ContinuousActions[1];
             CurrentEnginePower = 0f;
-            AddReward(-0.1f);
+            AddReward(-0.2f);
         }
 
         var ColliderCheck = Car.GetComponent<ColliderCheck>();
@@ -84,7 +120,7 @@ public class car : Agent
         }
         else
         {
-            AddReward(0.05f * Car.GetComponent<Rigidbody>().velocity.magnitude);
+            AddReward(0.025f * Mathf.Sqrt(Car.GetComponent<Rigidbody>().velocity.magnitude));
         }
         if (totalDistance > distancebeforeendepisode)
         {
